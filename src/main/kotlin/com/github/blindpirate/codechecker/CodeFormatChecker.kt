@@ -19,19 +19,19 @@ import java.io.File
 import java.util.Locale
 import java.util.Properties
 
-fun main() {
-    val listener = MyListener()
-    CodeFormatChecker().runCheckstyle(
-        "/checkstyle.xml",
-        listOf(*File("src/test/resources/bad-format-code").listFiles()),
-        listener)
-
-    LocalizedMessage.setLocale(Locale.CHINESE)
-    listener.fileToErrorsMap.forEach { file: String, message: LocalizedMessage ->
-        println("${file}:${message.lineNo}")
-        println(message.message)
-    }
-}
+//fun main() {
+//    val listener = MyListener()
+//    CodeFormatChecker().runCheckstyle(
+//        "/checkstyle.xml",
+//        listOf(*File("src/test/resources/bad-format-code").listFiles()),
+//        listener)
+//
+//    LocalizedMessage.setLocale(Locale.CHINESE)
+//    listener.fileToErrorsMap.forEach { file: String, message: LocalizedMessage ->
+//        println("${file}:${message.lineNo}")
+//        println(message.message)
+//    }
+//}
 
 class CodeFormatChecker {
     fun check(file: File): List<CodeFormatIssue> {
