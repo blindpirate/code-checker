@@ -6,9 +6,9 @@ import com.github.blindpirate.codechecker.PullRequestAction.REOPENED
 import com.github.blindpirate.codechecker.PullRequestAction.SYNCHRONIZE
 import com.github.blindpirate.codechecker.model.PullRequestGitHubEvent
 import com.github.blindpirate.codechecker.model.PullRequestWithReviewThreads
-import com.github.stkent.githubdiffparser.GitHubDiffParser
 import com.google.common.collect.Multimap
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.stereotype.Controller
@@ -50,7 +50,7 @@ enum class PullRequestAction {
 }
 
 @Controller
-class HelloController {
+class HelloController @Autowired constructor(val gitHubUnifiedDiffParser: GitHubUnifiedDiffParser) {
     private val acceptedActions = listOf(OPENED, SYNCHRONIZE, REOPENED)
 
     @PostMapping("/github")
@@ -90,11 +90,11 @@ class HelloController {
 
         var commentCounter = 0
         // Only parse non-deleted file
-        diffs.forEach { (fileRelativePath: String, startLineNumber: Int) ->
+        diffs.forEach { (fileRelativePath: String, realLineToPositionMap: Map<Int, Int>) ->
             val file = downloadChangedFile(pr, owner, name, headCommit, fileRelativePath)
             val issues = runCheckstyle(file)
             println("Run checkstyle on $file, found ${issues.values().size} issues")
-            commentCounter += commentIfNotCommentedYet(pr, headCommit, fileRelativePath, startLineNumber, issues.get(file.absolutePath))
+            commentCounter += commentIfNotCommentedYet(pr, headCommit, fileRelativePath, realLineToPositionMap, issues.get(file.absolutePath))
         }
 
         if (commentCounter != 0) {
@@ -104,25 +104,13 @@ class HelloController {
 
 
     /**
-     * Parse a unified diff, return [relativePath -> first hunk line number]
-     */
-    private fun parseUnifiedDiff(owner: String, name: String, number: Int): Map<String, Int> {
-        val diffUrl = "https://patch-diff.githubusercontent.com/raw/${owner}/${name}/pull/$number.diff"
-        val targetFile = Files.createTempFile("", "${owner}_${name}_${number}.diff").toFile()
-        saveTo(targetFile, diffUrl)
-        return GitHubDiffParser()
-            .parse(targetFile)
-            .filter { it.toFileName != "/dev/null" }
-            .filter { it.toFileName.endsWith(".java") }
-            .map {
-                it.toFileName to it.hunks[0].toFileRange.lineStart
-            }.toMap()
-    }
-
-    /**
      * Comment on the pull request, return comment number.
      */
-    private fun commentIfNotCommentedYet(pr: PullRequestWithReviewThreads, headCommit: String, fileRelativePath: String, startLineNumber: Int, messages: Collection<LocalizedMessage>): Int {
+    private fun commentIfNotCommentedYet(pr: PullRequestWithReviewThreads,
+                                         headCommit: String,
+                                         fileRelativePath: String,
+                                         realLineToPositionMap: Map<Int, Int>,
+                                         messages: Collection<LocalizedMessage>): Int {
         if (messages.isEmpty()) {
             return 0
         }
@@ -130,12 +118,14 @@ class HelloController {
         var counter = 0
         LocalizedMessage.setLocale(Locale.CHINESE)
         val lineNumberToMessageMap = messages.groupBy { it.lineNo }.map { entry ->
-            entry.key to entry.value.joinToString("\n") { it.message }
+            entry.key to entry.value.joinToString("\n") { "`${it.message}`" } // backquote to avoid markdown rendering
         }
 
         lineNumberToMessageMap.forEach { (lineNumber: Int, message: String) ->
             // Comment on the file lines, if it's not commented yet.
-            if (pr.data.repository.pullRequest.reviewThreads.nodes.any { reviewThread ->
+            if (!realLineToPositionMap.containsKey(lineNumber)) {
+                println("$fileRelativePath:$lineNumber not found in diff, skip.")
+            } else if (pr.data.repository.pullRequest.reviewThreads.nodes.any { reviewThread ->
                     reviewThread.comments.nodes.any { it.path == fileRelativePath && reviewThread.line == lineNumber }
                 }) {
                 println("$fileRelativePath:$lineNumber is already commented, skip.")
@@ -143,7 +133,7 @@ class HelloController {
                 comment(pr.data.repository.pullRequest.id,
                     headCommit,
                     fileRelativePath,
-                    lineNumber + 1 - startLineNumber,
+                    realLineToPositionMap.getValue(lineNumber),
                     message)
                 counter++
             }
@@ -166,6 +156,17 @@ class HelloController {
         saveTo(targetFile, rawUrl)
         return targetFile
     }
+
+    /**
+     * Parse a unified diff, return [relativePath -> first hunk line number]
+     */
+    private fun parseUnifiedDiff(owner: String, name: String, number: Int): Map<String, Map<Int, Int>> {
+        val diffUrl = "https://patch-diff.githubusercontent.com/raw/${owner}/${name}/pull/$number.diff"
+        val targetFile = Files.createTempFile("", "${owner}_${name}_${number}.diff").toFile()
+        saveTo(targetFile, diffUrl)
+        return gitHubUnifiedDiffParser.parseDiff(targetFile)
+    }
+
 }
 
 private fun saveTo(targetFile: File, rawUrl: String) {
@@ -188,6 +189,10 @@ fun addPullRequestReviewComment(pullRequestId: String, commit: String, path: Str
 mutation { 
   addPullRequestReviewComment(input:{pullRequestId: "$pullRequestId",commitOID:"$commit",path:"$path",position:$position,body:${objectMapper.writeValueAsString(commentBody)}}) {
     clientMutationId
+    comment {
+      author { login }
+      body
+    }
   }
 }  
         """.replace('\n', ' ')

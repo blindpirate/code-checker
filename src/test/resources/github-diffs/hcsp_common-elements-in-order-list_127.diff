@@ -1,0 +1,51 @@
+diff --git a/src/main/java/com/github/hcsp/collection/Main.java b/src/main/java/com/github/hcsp/collection/Main.java
+index ae0f842..780818c 100644
+--- a/src/main/java/com/github/hcsp/collection/Main.java
++++ b/src/main/java/com/github/hcsp/collection/Main.java
+@@ -1,12 +1,17 @@
+ package com.github.hcsp.collection;
+ 
+-import java.util.Arrays;
+-import java.util.List;
+-import java.util.Set;
++import java.util.*;
+ 
+ public class Main {
+     // 请编写一个方法，获得a和b集合中的公共元素。
+-    public static Set<Person> commonElementsIn(List<Person> a, List<Person> b) {}
++    public static Set<Person> commonElementsIn(List<Person> a, List<Person> b) {
++        Set<Person> res = new HashSet<>();
++
++        res.addAll(a);
++        res.retainAll(b);
++
++        return res;
++    }
+ 
+     // Person类，如果两个Person对象的name相等，则认为这两个对象相等。
+     public static class Person {
+@@ -23,6 +28,24 @@ public String getName() {
+         public void setName(String name) {
+             this.name = name;
+         }
++
++        @Override
++        public boolean equals(Object o) {
++            if (this == o) {
++                return true;
++            }
++            if (o == null || getClass() != o.getClass()) {
++                return false;
++            }
++            Person person = (Person) o;
++            return Objects.equals(name, person.name);
++        }
++
++        @Override
++        public int hashCode() {
++            return Objects.hash(name);
++        }
++
+     }
+ 
+     public static void main(String[] args) {

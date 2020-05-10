@@ -155,7 +155,7 @@ class BadCodeFetcher {
     private fun getAllRepo(org: String): List<String> {
         val cacheFile = File("$org-repos.json")
         if (cacheFile.isFile) {
-            return objectMapper.readValue(cacheFile, List::class.java) as List<String>
+            return objectMapper.readValue(cacheFile, object : TypeReference<List<String>>() {})
         }
         val result = mutableListOf<String>()
         var currentPage = doQuery(RepositoryQueryResponse::class.java, getRepoQuery(org))
