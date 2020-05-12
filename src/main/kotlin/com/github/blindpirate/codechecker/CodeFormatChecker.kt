@@ -38,6 +38,12 @@ class CodeFormatChecker {
         return emptyList()
     }
 
+    fun runCheckstyle(file: File): Multimap<String, LocalizedMessage> {
+        val listener = MyListener()
+        CodeFormatChecker().runCheckstyle("/checkstyle.xml", listOf(file), listener)
+        return listener.fileToErrorsMap
+    }
+
     fun runCheckstyle(configFileLocation: String, filesToProcess: List<File>, auditListener: AuditListener): Int {
         // create a configuration
         val config = ConfigurationLoader.loadConfiguration(

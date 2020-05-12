@@ -6,7 +6,6 @@ import com.github.blindpirate.codechecker.PullRequestAction.REOPENED
 import com.github.blindpirate.codechecker.PullRequestAction.SYNCHRONIZE
 import com.github.blindpirate.codechecker.model.PullRequestGitHubEvent
 import com.github.blindpirate.codechecker.model.PullRequestWithReviewThreads
-import com.google.common.collect.Multimap
 import com.puppycrawl.tools.checkstyle.api.LocalizedMessage
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -92,7 +91,7 @@ class HelloController @Autowired constructor(val gitHubUnifiedDiffParser: GitHub
         // Only parse non-deleted file
         diffs.forEach { (fileRelativePath: String, realLineToPositionMap: Map<Int, Int>) ->
             val file = downloadChangedFile(pr, owner, name, headCommit, fileRelativePath)
-            val issues = runCheckstyle(file)
+            val issues = CodeFormatChecker().runCheckstyle(file)
             println("Run checkstyle on $file, found ${issues.values().size} issues")
             commentCounter += commentIfNotCommentedYet(pr, headCommit, fileRelativePath, realLineToPositionMap, issues.get(file.absolutePath))
         }
@@ -139,13 +138,6 @@ class HelloController @Autowired constructor(val gitHubUnifiedDiffParser: GitHub
             }
         }
         return counter
-    }
-
-    private fun runCheckstyle(file: File): Multimap<String, LocalizedMessage> {
-        LocalizedMessage.setLocale(Locale.CHINESE)
-        val listener = MyListener()
-        CodeFormatChecker().runCheckstyle("/checkstyle.xml", listOf(file), listener)
-        return listener.fileToErrorsMap
     }
 
     private fun downloadChangedFile(pr: PullRequestWithReviewThreads, prRepoOwner: String, prRepoName: String, prHeadCommit: String, relativePath: String): File {

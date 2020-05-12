@@ -20,7 +20,7 @@
         <module name="NeedBraces">
             <property name="allowSingleLineStatement" value="true"/>
         </module>
-<!--        <module name="DeclarationOrder"/>-->
+        <!--        <module name="DeclarationOrder"/>-->
         <module name="DefaultComesLast">
             <property name="skipIfLastAndSharedWithCase" value="true"/>
         </module>
@@ -45,11 +45,17 @@
         <module name="ConstantName"/>
         <module name="LambdaParameterName"/>
         <module name="LocalVariableName"/>
-        <module name="MemberName"/>
-        <module name="MethodName"/>
+        <module name="MemberName">
+            <property name="format" value="^[a-z\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff]*$"/>
+        </module>
+        <module name="MethodName">
+            <property name="format" value="^[a-z\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff]*$"/>
+        </module>
         <module name="PackageName"/>
         <module name="StaticVariableName"/>
-        <module name="TypeName"/>
+        <module name="TypeName">
+            <property name="format" value="^[A-Z\u4e00-\u9fff][a-zA-Z0-9\u4e00-\u9fff]*$"/>
+        </module>
         <module name="GenericWhitespace"/>
         <module name="NoLineWrap"/>
         <module name="WhitespaceAfter"/>

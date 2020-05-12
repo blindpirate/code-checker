@@ -3,12 +3,23 @@ package com.github.blindpirate.codechecker
 import com.github.blindpirate.fixtures.ResourceLoaderFixture
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import java.io.File
 
 @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class CodeFormatCheckResultTest : ResourceLoaderFixture {
     private val codeChecker = CodeFormatChecker()
+
+    @Test
+    fun `dont warn Chinese character`() {
+        val result = codeChecker.runCheckstyle(getResource("code-containing-chinese-char.java"))
+        result.asMap().forEach { (file, messages) ->
+            println("$file\n ")
+            println(messages.joinToString(" \n") { it.message })
+        }
+        Assertions.assertTrue(result.isEmpty)
+    }
 
     @TestFactory
     fun test(): Iterable<DynamicTest> {

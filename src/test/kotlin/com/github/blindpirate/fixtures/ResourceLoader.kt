@@ -9,4 +9,7 @@ interface ResourceLoaderFixture {
         File(javaClass.classLoader.getResource(path).toURI()).also {
             Assertions.assertTrue(it.isDirectory) { "$it must be directory!" }
         }
+
+    fun getResource(path: String): File =
+        File(javaClass.classLoader.getResource(path).toURI())
 }
